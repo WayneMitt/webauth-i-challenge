@@ -23,7 +23,6 @@ const sessionConfig = {
 server.use(helmet());
 server.use(express.json());
 server.use(cors());
-server.use(session(sessionConfig));
 
 server.get('/', (req, res) => {
   res.send("It's alive!");
@@ -32,7 +31,8 @@ server.get('/', (req, res) => {
 server.post('/api/register', (req, res) => {
   let user = req.body;
 
-  user.password = bcrypt.hashSync(user.password, 10);
+  const hash =  bcrypt.hashSync(user.password, 10);
+  user.password = hash
 
   Users.add(user)
     .then(saved => {
