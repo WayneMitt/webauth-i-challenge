@@ -8,9 +8,22 @@ const Users = require('./users/users-model.js');
 
 const server = express();
 
+const sessionConfig = {
+  name: 'Waynes Sesh',
+  secret: 'macadamia nut are my favs',
+  cookie: {
+    maxAge: 1000 * 60 *60,
+    secure: false,
+    httpOnly: true
+  },
+  resave: false,
+  saveUninitialized: false
+}
+
 server.use(helmet());
 server.use(express.json());
 server.use(cors());
+server.use(session(sessionConfig));
 
 server.get('/', (req, res) => {
   res.send("It's alive!");
@@ -23,6 +36,7 @@ server.post('/api/register', (req, res) => {
 
   Users.add(user)
     .then(saved => {
+      req.session.user = saved;
       res.status(201).json(saved);
     })
     .catch(error => {
@@ -37,6 +51,8 @@ server.post('/api/login', (req, res) => {
     .first()
     .then(user => {
       if (user && bcrypt.compareSync(password, user.password)) {
+
+        req.session.user = user;
         res.status(200).json({ message: `Welcome ${user.username}!` });
       } else {
         res.status(401).json({ message: 'You shall not pass!' });
@@ -56,23 +72,11 @@ server.get('/api/users', restricted, (req, res) => {
 });
 
 function restricted(req, res, next) {
-    const { username, password } = req.headers;
 
-    if (username && password) {
-        Users.findBy({ username })
-        .first()
-        .then(user => {
-            if (user && bcrypt.compareSync(password, user.password)) {
-                next();
-            } else {
-                res.status(401).json({ message: "You shall not pass!"})
-            }
-        })
-        .catch(err => {
-            res.status(500).json({ message: "unexpected error"})
-        })
+    if (req.session && req.session.user) {
+      next();
     } else {
-        res.status(400).json({ message: "You shall not pass!"})
+      res.status(401).json({ message: "You shall not pass!"})
     }
 }
 
